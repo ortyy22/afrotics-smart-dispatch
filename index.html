@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AFROTICS Smart Dispatch</title>
+<script src="https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js"></script>
+<style>
+:root{--green:#65a30d;--dark:#17211a;--muted:#667085;--line:#e4e7ec;--bg:#f5f7f4}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--dark)}
+header{background:#fff;border-bottom:1px solid var(--line);padding:16px max(16px,calc((100vw - 1050px)/2));display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-weight:900;letter-spacing:1.4px;color:#365314}.sub{font-size:12px;color:var(--muted);margin-top:3px}.pill{font-size:12px;padding:7px 10px;border-radius:99px;background:#ecfccb;color:#3f6212;font-weight:700}
+main{max-width:1050px;margin:22px auto;padding:0 16px}.tabs{display:flex;gap:8px;overflow:auto;margin-bottom:18px}.tab,button{border:0;border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer}.tab{background:#e9ede7;color:#344054;white-space:nowrap}.tab.active,button.primary{background:var(--green);color:white}.grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}.card{background:white;border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}.card h2{font-size:17px;margin:0 0 14px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat{padding:14px;border-radius:12px;background:#f8faf7;border:1px solid var(--line)}.stat span{display:block;color:var(--muted);font-size:12px}.stat strong{font-size:26px;display:block;margin-top:5px}.field{display:flex;flex-direction:column;gap:6px;margin:10px 0}.field label{font-size:12px;color:#475467;font-weight:700}input,select{width:100%;padding:11px;border:1px solid #d0d5dd;border-radius:9px;background:#fff;font:inherit}button.secondary{background:#eef2ec;color:#344054}button.danger{background:#fee4e2;color:#b42318}.row{display:flex;gap:10px;align-items:center}.row>*{flex:1}.scanner{background:#101710;border-radius:12px;overflow:hidden;position:relative;min-height:220px;display:flex;align-items:center;justify-content:center;color:#d0d5dd;text-align:center}.scanner video{width:100%;max-height:340px;object-fit:cover}.scanner .placeholder{padding:28px}.hint{font-size:12px;color:var(--muted);line-height:1.5}.status{padding:10px;border-radius:9px;background:#f2f4f7;font-size:13px;margin-top:10px}.status.ok{background:#ecfdf3;color:#027a48}.status.warn{background:#fffaeb;color:#b54708}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:#667085;background:#fafafa}.hidden{display:none}.tiny{font-size:11px;color:var(--muted)}.badge{background:#f2f4f7;border-radius:7px;padding:4px 7px;font-size:11px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(3,1fr)}.stat strong{font-size:22px}.card{padding:14px}header{padding:14px 16px}}
+</style></head>
+<body>
+<header><div><div class="brand">AFROTICS</div><div class="sub">Smart Dispatch & Returns</div></div><div class="pill">PROTOTYPE · LOCAL DEMO</div></header>
+<main>
+<div class="tabs">
+<button class="tab active" data-tab="scan">Pack & Scan</button><button class="tab" data-tab="returns">Returns / RTO</button><button class="tab" data-tab="records">Records & Export</button>
+</div>
+<section id="scan">
+<div class="grid">
+<div>
+<div class="card"><h2>Scan packed parcel</h2>
+<div class="row"><div class="field"><label>Marketplace</label><select id="market"><option>Meesho</option><option>Amazon</option><option>Flipkart</option><option>Other</option></select></div><div class="field"><label>Parcel type</label><select id="kind"><option>Single order</option><option>Combo order</option></select></div></div>
+<div class="scanner" id="scanner"><div class="placeholder"><div style="font-size:32px">▦</div><b>Camera scanner is off</b><p class="hint" style="color:#cbd5d1">Start scanning and allow camera access. Use HTTPS or localhost for camera permissions.</p></div></div>
+<div class="row" style="margin-top:10px"><button class="primary" id="start">Start continuous scan</button><button class="secondary" id="stop" disabled>Stop</button></div>
+<div class="status" id="scanStatus">Ready. Each unique scan will save automatically.</div>
+<p class="hint">The camera scanner reads supported barcodes/QR codes. It cannot guarantee that a label reveals order details; import marketplace reports to match shipment IDs to orders and SKUs.</p>
+<div class="field"><label>Manual fallback (tracking / barcode value)</label><input id="manualCode" placeholder="Scan value or type tracking ID"></div>
+<button class="secondary" id="manualSave">Save code</button>
+</div>
+<div class="card"><h2>Today at a glance</h2><div class="stats">
+<div class="stat"><span>Packed scans</span><strong id="packedCount">0</strong></div><div class="stat"><span>Single orders</span><strong id="singleCount">0</strong></div><div class="stat"><span>Combo orders</span><strong id="comboCount">0</strong></div>
+</div><div class="stats" style="margin-top:10px"><div class="stat"><span>Returns / RTO</span><strong id="returnCount">0</strong></div><div class="stat"><span>Duplicates blocked</span><strong id="dupCount">0</strong></div><div class="stat"><span>Awaiting handover</span><strong id="pendingCount">0</strong></div></div>
+<div class="field"><label>Courier handover reference (optional)</label><input id="handoverRef" placeholder="Manifest / pickup reference"></div><button class="secondary" id="handover">Mark selected day's packed parcels handed over</button><p class="hint">Demo action marks all packed parcels for the selected date as handed over. Use only when the courier actually collects them.</p></div>
+</div>
+</div>
+</section>
+<section id="returns" class="hidden"><div class="card"><h2>Scan a return parcel</h2><div class="field"><label>Return category</label><select id="returnType"><option>RTO</option><option>Customer return</option><option>Normal return</option></select></div><div class="field"><label>Marketplace</label><select id="returnMarket"><option>Meesho</option><option>Amazon</option><option>Flipkart</option><option>Other</option></select></div><div class="field"><label>Tracking / barcode value</label><input id="returnCode" placeholder="Scan or enter parcel tracking code"></div><button class="primary" id="saveReturn">Save return</button><div id="returnStatus" class="status">Returns are saved separately and linked by tracking code when available.</div><p class="hint">For camera-based return scanning, stop the packing scanner, then scan/copy the label value into this return form. A dedicated return camera mode can be added next.</p></div></section>
+<section id="records" class="hidden"><div class="card"><h2>Records & reports</h2><div class="row"><div class="field"><label>Filter date</label><input type="date" id="filterDate"></div><div class="field"><label>Record type</label><select id="filterType"><option value="all">All records</option><option value="packed">Packed scans</option><option value="return">Returns</option></select></div></div><div class="row"><button class="primary" id="exportCsv">Export CSV</button><button class="secondary" id="exportJson">Backup JSON</button><button class="danger" id="clearData">Clear local demo data</button></div><p class="hint">Records in this prototype are stored in this browser on this device only. They do not automatically sync to other staff phones or a central database.</p><div class="tablewrap"><table><thead><tr><th>Time</th><th>Type</th><th>Marketplace</th><th>Code</th><th>Category</th><th>Status</th></tr></thead><tbody id="recordsBody"></tbody></table></div></div></section>
+<div class="tiny">Prototype v0.1 · Test with sample labels before using for live dispatch. No marketplace API integration or cloud sync is configured.</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const dateNow=()=>new Date().toISOString().slice(0,10);
+$('filterDate').value=dateNow();
+let records=JSON.parse(localStorage.getItem('afroticsDispatchRecords')||'[]');
+let reader=null, controls=null, dupCount=0;
+const persist=()=>{localStorage.setItem('afroticsDispatchRecords',JSON.stringify(records));render()};
+function day(r){return (r.time||'').slice(0,10)===dateNow()}
+function beep(freq=880){try{const c=new (window.AudioContext||window.webkitAudioContext)();const o=c.createOscillator(),g=c.createGain();o.frequency.value=freq;o.connect(g);g.connect(c.destination);g.gain.value=.07;o.start();o.stop(c.currentTime+.12)}catch(e){}}
+function status(msg,kind=''){ $('scanStatus').textContent=msg;$('scanStatus').className='status '+kind}
+function savePacked(code){code=String(code||'').trim();if(!code)return;
+if(records.some(r=>r.type==='packed'&&r.code===code)){dupCount++;$('dupCount').textContent=dupCount;status('Duplicate blocked: '+code,'warn');beep(220);return}
+records.unshift({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),time:new Date().toISOString(),type:'packed',market:$('market').value,kind:$('kind').value,code,category:'Packed',status:'Awaiting handover',handoverRef:''});persist();status('Saved automatically: '+code,'ok');beep();$('manualCode').value='';}
+function saveReturn(){const code=$('returnCode').value.trim();if(!code){$('returnStatus').textContent='Enter or scan a tracking code first.';return}
+records.unshift({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),time:new Date().toISOString(),type:'return',market:$('returnMarket').value,kind:'',code,category:$('returnType').value,status:'Return recorded',handoverRef:''});persist();$('returnStatus').textContent='Return saved: '+code;$('returnStatus').className='status ok';beep();$('returnCode').value=''}
+function render(){const today=records.filter(day);const packed=today.filter(r=>r.type==='packed');$('packedCount').textContent=packed.length;$('singleCount').textContent=packed.filter(r=>r.kind==='Single order').length;$('comboCount').textContent=packed.filter(r=>r.kind==='Combo order').length;$('returnCount').textContent=today.filter(r=>r.type==='return').length;$('pendingCount').textContent=packed.filter(r=>r.status==='Awaiting handover').length;
+const fd=$('filterDate').value;const ft=$('filterType').value;const filtered=records.filter(r=>(!fd||(r.time||'').slice(0,10)===fd)&&(ft==='all'||(ft==='packed'?r.type==='packed':r.type==='return')));
+$('recordsBody').innerHTML=filtered.map(r=>`<tr><td>${new Date(r.time).toLocaleString()}</td><td>${r.type}</td><td>${esc(r.market)}</td><td>${esc(r.code)}</td><td>${esc(r.category||'')}</td><td>${esc(r.status||'')}</td></tr>`).join('')||'<tr><td colspan="6">No records for this filter.</td></tr>'}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));['scan','returns','records'].forEach(s=>$(s).classList.toggle('hidden',s!==b.dataset.tab));if(b.dataset.tab!=='scan')stopScan()});
+async function startScan(){if(!window.ZXingBrowser){status('Scanner library did not load. Check internet connection and reload.','warn');return}
+try{const video=document.createElement('video');video.playsInline=true;video.muted=true;$('scanner').innerHTML='';$('scanner').appendChild(video);reader=new ZXingBrowser.BrowserMultiFormatReader();controls=await reader.decodeFromVideoDevice(undefined,video,(result,err)=>{if(result)savePacked(result.getText())});$('start').disabled=true;$('stop').disabled=false;status('Camera active. Scan parcels one by one; each unique code auto-saves.','ok')}catch(e){$('scanner').innerHTML='<div class="placeholder">Camera unavailable. Allow camera permission and use HTTPS, or enter the code manually.</div>';status('Could not start camera: '+e.message,'warn')}}
+function stopScan(){try{if(controls)controls.stop()}catch(e){}controls=null;reader=null;$('start').disabled=false;$('stop').disabled=true;$('scanner').innerHTML='<div class="placeholder"><div style="font-size:32px">▦</div><b>Camera scanner is off</b><p class="hint" style="color:#cbd5d1">Press Start continuous scan to begin.</p></div>'}
+$('start').onclick=startScan;$('stop').onclick=stopScan;$('manualSave').onclick=()=>savePacked($('manualCode').value);$('manualCode').addEventListener('keydown',e=>{if(e.key==='Enter')savePacked($('manualCode').value)});$('saveReturn').onclick=saveReturn;
+$('handover').onclick=()=>{const ref=$('handoverRef').value.trim();let n=0;records=records.map(r=>{if(r.type==='packed'&&(r.time||'').slice(0,10)===dateNow()&&r.status==='Awaiting handover'){n++;return {...r,status:'Handed over',handoverRef:ref}}return r});persist();status(n+' parcels marked handed over.','ok')};
+$('filterDate').onchange=render;$('filterType').onchange=render;
+function download(name,content,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
+$('exportJson').onclick=()=>download('afrotics-dispatch-backup-'+dateNow()+'.json',JSON.stringify(records,null,2),'application/json');
+$('exportCsv').onclick=()=>{const fd=$('filterDate').value;const ft=$('filterType').value;const rows=records.filter(r=>(!fd||(r.time||'').slice(0,10)===fd)&&(ft==='all'||(ft==='packed'?r.type==='packed':r.type==='return')));const cols=['time','type','market','kind','code','category','status','handoverRef'];const csv=[cols.join(','),...rows.map(r=>cols.map(k=>'"'+String(r[k]??'').replace(/"/g,'""')+'"').join(','))].join('\r\n');download('afrotics-dispatch-'+(fd||'all')+'.csv',csv,'text/csv;charset=utf-8')};
+$('clearData').onclick=()=>{if(confirm('Delete all local demo records from this browser? Export a backup first if needed.')){records=[];dupCount=0;localStorage.removeItem('afroticsDispatchRecords');$('dupCount').textContent='0';render()}};
+render();
+</script></body></html>
