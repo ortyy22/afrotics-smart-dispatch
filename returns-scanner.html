@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AFROTICS Return / RTO Scanner</title>
+<script src="https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f7f4;color:#202820;font:16px Arial,sans-serif}header{background:white;padding:18px;border-bottom:1px solid #e4e7ec}.brand{font-weight:900;letter-spacing:1px;color:#365314;font-size:20px}.sub,.hint{color:#667085;line-height:1.5}main{max-width:720px;margin:20px auto;padding:0 14px}.card{background:white;border:1px solid #e4e7ec;border-radius:18px;padding:20px;margin-bottom:16px}h1{font-size:23px;margin:0 0 16px}label{display:block;font-weight:bold;color:#475467;margin:14px 0 7px}select,input,button{font:inherit;border-radius:12px;width:100%;padding:14px;border:1px solid #cfd4dc;background:white}button{border:0;background:#65a30d;color:white;font-weight:bold;margin-top:12px}button.secondary{background:#e9f0e5;color:#365314;border:1px solid #c9d8bd}video{width:100%;max-height:360px;background:#111;border-radius:12px;margin-top:12px;display:none}.status{background:#f2f4f7;border-radius:12px;padding:12px;margin-top:12px;overflow-wrap:anywhere}.ok{color:#067647}.error{color:#b42318}
+</style></head><body>
+<header><div class="brand">AFROTICS</div><div class="sub">Smart Dispatch · Return / RTO Scanner</div></header>
+<main><section class="card"><h1>Scan a return parcel</h1>
+<p class="hint">Choose the return category and marketplace, then scan the parcel barcode. Verify the scanned value before saving.</p>
+<label for="category">Return category</label><select id="category"><option>Normal return</option><option>RTO</option><option>Exchange</option></select>
+<label for="marketplace">Marketplace</label><select id="marketplace"><option>Amazon</option><option>Flipkart</option><option>Meesho</option><option>Other courier</option></select>
+<label for="tracking">Tracking / barcode value</label><input id="tracking" placeholder="Scan or enter parcel tracking code" autocomplete="off">
+<button id="start">Start Return Scanner</button><button id="stop" class="secondary" style="display:none">Stop Scanner</button><video id="video" playsinline muted></video>
+<div id="status" class="status">Ready. Tap Start Return Scanner and allow camera access when prompted.</div>
+<button id="save">Save return on this device</button><button id="export" class="secondary">Export saved returns (CSV)</button></section>
+<section class="card"><h1>Saved returns on this device</h1><div id="records" class="hint">No returns saved yet.</div>
+<p class="hint">Demo only: records are stored in this browser on this device. No cloud sync or marketplace integration. Inspect returned parcels before restocking.</p></section></main>
+<script>
+const $=id=>document.getElementById(id);let controls=null,stream=null,saved=JSON.parse(localStorage.getItem('afrotics_return_scans_v1')||'[]');
+function say(t,k=''){ $('status').textContent=t;$('status').className='status '+k}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function render(){ $('records').innerHTML=saved.length?saved.slice().reverse().map(r=>`<div style="border-bottom:1px solid #e4e7ec;padding:10px 0"><b>${esc(r.tracking)}</b><br>${esc(r.marketplace)} · ${esc(r.category)}<br><small>${esc(r.time)}</small></div>`).join(''):'No returns saved yet.'}
+async function stopScan(){try{if(controls){controls.stop();controls=null}if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}}catch(e){}$('video').style.display='none';$('stop').style.display='none';$('start').style.display='block'}
+$('start').onclick=async()=>{const video=$('video');video.style.display='block';$('start').style.display='none';$('stop').style.display='block';
+try{if(!navigator.mediaDevices?.getUserMedia)throw Error('Camera access unavailable. Open this page using its HTTPS GitHub Pages link.');
+stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});video.srcObject=stream;await video.play();say('Camera is on. Hold the barcode steady in view.');
+if(window.ZXingBrowser?.BrowserMultiFormatReader){const reader=new ZXingBrowser.BrowserMultiFormatReader();controls=await reader.decodeFromVideoElement(video,(result)=>{if(result){$('tracking').value=result.getText();say('Barcode scanned. Verify the value, then tap Save return.','ok');stopScan()}})}
+else if('BarcodeDetector' in window){const detector=new BarcodeDetector();const scan=async()=>{if(!stream)return;try{const codes=await detector.detect(video);if(codes.length){$('tracking').value=codes[0].rawValue;say('Barcode scanned. Verify the value, then tap Save return.','ok');stopScan();return}}catch(e){}requestAnimationFrame(scan)};requestAnimationFrame(scan)}
+else throw Error('Scanner library did not load. Check internet and reload the page.')
+}catch(e){await stopScan();say('Could not start scanner: '+(e.message||e)+'. Check Chrome camera permission and use HTTPS.','error')}};
+$('stop').onclick=stopScan;
+$('save').onclick=()=>{const tracking=$('tracking').value.trim();if(!tracking){say('Scan or enter a tracking code before saving.','error');return}saved.push({tracking,category:$('category').value,marketplace:$('marketplace').value,time:new Date().toLocaleString()});localStorage.setItem('afrotics_return_scans_v1',JSON.stringify(saved));$('tracking').value='';render();say('Return saved on this device. Inspect the parcel before restocking.','ok')};
+$('export').onclick=()=>{if(!saved.length){say('No saved returns to export.');return}const rows=[['Tracking code','Category','Marketplace','Saved at'],...saved.map(r=>[r.tracking,r.category,r.marketplace,r.time])];const csv=rows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='afrotics-returns.csv';a.click();URL.revokeObjectURL(a.href)};
+render();
+</script></body></html>
