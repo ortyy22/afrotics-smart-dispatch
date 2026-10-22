@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AFROTICS Smart Dispatch 2.0</title>
+<script src="https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js"></script>
+<style>
+:root{--green:#65a30d;--dark:#17211a;--muted:#667085;--line:#e4e7ec;--bg:#f5f7f4}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#202820;font:15px Arial,sans-serif}header{background:#fff;border-bottom:1px solid var(--line);padding:16px} .brand{font-weight:900;letter-spacing:1.4px;color:#365314;font-size:21px}.sub{color:var(--muted);margin-top:4px}main{max-width:1050px;margin:18px auto;padding:0 12px}
+nav{display:flex;gap:8px;overflow:auto;padding:8px 0 14px}nav button{white-space:nowrap;width:auto;margin:0;background:#e9eee7;color:#344054;padding:12px 14px}nav button.active{background:var(--green);color:#fff}
+.card{background:white;border:1px solid var(--line);border-radius:16px;padding:17px;margin-bottom:14px}h1{font-size:22px;margin:0 0 15px}h2{font-size:18px;margin:0 0 12px}label{display:block;font-weight:700;color:#475467;margin:12px 0 6px}input,select,textarea{width:100%;font:inherit;border:1px solid #cfd4dc;border-radius:10px;padding:12px;background:#fff}button{font:inherit;border:0;border-radius:10px;padding:12px 14px;background:var(--green);color:white;font-weight:700;margin:7px 5px 0 0;cursor:pointer}button.secondary{background:#e9f0e5;color:#365314;border:1px solid #c9d8bd}button.danger{background:#b42318}button:disabled{opacity:.5} .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.stat{background:#f7f9f6;border:1px solid var(--line);border-radius:12px;padding:14px}.stat strong{display:block;font-size:25px;margin-top:6px}.hint{font-size:13px;color:var(--muted);line-height:1.5}.status{background:#f2f4f7;border-radius:10px;padding:11px;margin-top:10px;overflow-wrap:anywhere}.ok{color:#067647}.error{color:#b42318}video{display:none;width:100%;max-height:320px;background:#111;border-radius:12px;margin-top:10px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;border-bottom:1px solid var(--line);padding:9px 7px;vertical-align:top;overflow-wrap:anywhere}th{background:#f7f9f6}.tablewrap{overflow:auto}.pill{display:inline-block;padding:4px 8px;background:#eef4e8;border-radius:99px;font-size:12px}.hidden{display:none!important}.foot{font-size:12px;color:var(--muted);padding:12px 3px}
+@media(max-width:680px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:0 10px}.card{padding:14px}nav button{padding:11px}}
+</style></head>
+<body>
+<header><div class="brand">AFROTICS</div><div class="sub">Smart Dispatch 2.0 · Orders, Pickup, Returns & Records</div></header>
+<main>
+<nav id="nav">
+<button class="active" data-tab="dashboard">Dashboard</button><button data-tab="orders">Pack & Scan</button><button data-tab="returns">Returns / RTO</button><button data-tab="pickup">Pickup & RTD</button><button data-tab="register">Daily Register</button><button data-tab="records">Records & Export</button>
+</nav>
+<section id="dashboard" class="page">
+<div class="card"><h1>Today's operations</h1><div class="stats">
+<div class="stat">Orders recorded<strong id="statOrders">0</strong></div><div class="stat">Packed / RTD<strong id="statPacked">0</strong></div><div class="stat">Pickup recorded<strong id="statPickup">0</strong></div><div class="stat">Returns / RTO<strong id="statReturns">0</strong></div></div>
+<p class="hint">Use sample data to demonstrate the workflow. The app stores records in this browser on this device.</p><button id="loadDemo">Load sample orders</button><button class="secondary" id="clearDemo">Clear sample data</button></div>
+<div class="card"><h2>Workflow reminders</h2><ul><li>Verify order details and marketplace before dispatch.</li><li>Record RTD separately from physical courier pickup.</li><li>If a courier reports cancellation, verify in the seller panel before confirming.</li><li>Inspect returned parcels; restock only after authorized saleable inspection.</li></ul></div>
+</section>
+<section id="orders" class="page hidden"><div class="grid">
+<div class="card"><h1>Pack & Scan</h1><label>Marketplace</label><select id="oMarket"><option>Amazon</option><option>Flipkart</option><option>Meesho</option><option>Other</option></select>
+<label>Order ID / tracking / barcode</label><input id="oCode" placeholder="Scan or enter code">
+<label>SKU</label><input id="oSku" placeholder="e.g. AF-FW-100">
+<label>Quantity</label><input id="oQty" type="number" min="1" value="1">
+<label>Ship-by date</label><input id="oDate" type="date">
+<label>Notes</label><input id="oNotes" placeholder="Optional">
+<button id="saveOrder">Save order / packed scan</button><button class="secondary" id="startPack">Start camera scanner</button><button class="secondary hidden" id="stopPack">Stop scanner</button><video id="packVideo" playsinline muted></video><div id="packStatus" class="status">Ready for manual entry or camera scan.</div></div>
+<div class="card"><h2>Recent orders</h2><div id="recentOrders" class="hint">No orders recorded.</div></div></div></section>
+<section id="returns" class="page hidden"><div class="grid">
+<div class="card"><h1>Scan a return parcel</h1><label>Return category</label><select id="rCategory"><option>Normal return</option><option>RTO</option><option>Exchange</option></select>
+<label>Marketplace</label><select id="rMarket"><option>Amazon</option><option>Flipkart</option><option>Meesho</option><option>Other courier</option></select>
+<label>Tracking / barcode value</label><input id="rCode" placeholder="Scan or enter parcel tracking code">
+<button id="startReturn">Start Return Scanner</button><button id="stopReturn" class="secondary hidden">Stop scanner</button><video id="returnVideo" playsinline muted></video><div id="returnStatus" class="status">Ready. Tap Start Return Scanner and allow camera access.</div>
+<label>Inspection status</label><select id="rInspection"><option>Awaiting inspection</option><option>Saleable - authorized</option><option>Damaged - do not restock</option><option>Pending manager review</option></select>
+<label>Notes</label><input id="rNotes" placeholder="Condition / reason / reviewer">
+<button id="saveReturn">Save return</button></div>
+<div class="card"><h2>Recent returns</h2><div id="recentReturns" class="hint">No returns recorded.</div></div></div></section>
+<section id="pickup" class="page hidden"><div class="card"><h1>Pickup & RTD register</h1><label>Order ID / tracking code</label><input id="pCode" placeholder="Enter saved order code">
+<label>Marketplace</label><select id="pMarket"><option>Amazon</option><option>Flipkart</option><option>Meesho</option><option>Other</option></select>
+<label>RTD status</label><select id="pRtd"><option>Not marked RTD</option><option>RTD completed</option><option>Not applicable</option></select>
+<label>Physical pickup status</label><select id="pPickup"><option>Pending pickup</option><option>Picked up by courier</option><option>Pickup missed</option><option>Courier claims cancelled - verify seller panel</option><option>Cancellation verified in seller panel</option></select>
+<label>Pickup / RTD date</label><input id="pDate" type="date"><label>Courier / handover reference</label><input id="pRef" placeholder="Optional AWB / reference"><label>Notes</label><input id="pNotes" placeholder="Optional reason or details">
+<button id="savePickup">Save pickup / RTD update</button><p class="hint">RTD and physical pickup are separate events. Do not mark a cancellation confirmed until verified in the seller panel.</p></div></section>
+<section id="register" class="page hidden"><div class="card"><h1>Daily Register</h1><label>Register date</label><input id="regDate" type="date"><button id="showRegister">Show daily totals</button><div id="registerSummary" class="status">Choose a date and tap Show daily totals.</div><div class="tablewrap" id="registerTable"></div></div></section>
+<section id="records" class="page hidden"><div class="card"><h1>Records & Export</h1><p class="hint">Export CSV files for review or create a JSON backup of all local records.</p><button id="exportOrders">Export orders CSV</button><button id="exportReturns">Export returns CSV</button><button id="exportPickup">Export pickup / RTD CSV</button><button id="backup" class="secondary">Download full JSON backup</button><label>Restore JSON backup</label><input type="file" id="restoreFile" accept=".json,application/json"><button id="restore" class="secondary">Restore selected backup</button><div class="tablewrap" id="allRecords"></div></div></section>
+<div class="foot">Prototype only · Local storage on this device/browser · No marketplace APIs, shared cloud database, staff login or automatic sync configured. Test with sample labels before live use.</div>
+</main>
+<script>
+const $=id=>document.getElementById(id),KEY='afrotics_smart_dispatch_unified_v2';
+let db=JSON.parse(localStorage.getItem(KEY)||'{"orders":[],"returns":[],"pickups":[]}'),scanReader=null,scanControls={pack:null,ret:null},streams={pack:null,ret:null};
+function persist(){localStorage.setItem(KEY,JSON.stringify(db));render()}
+function today(){return new Date().toISOString().slice(0,10)}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function status(id,msg,kind=''){ $(id).textContent=msg;$(id).className='status '+kind}
+function switchTab(tab){document.querySelectorAll('.page').forEach(x=>x.classList.toggle('hidden',x.id!==tab));document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));if(tab==='register'&&!$('regDate').value)$('regDate').value=today()}
+$('nav').onclick=e=>{const b=e.target.closest('button[data-tab]');if(b)switchTab(b.dataset.tab)};
+function table(rows,keys){if(!rows.length)return '<p class="hint">No records yet.</p>';return '<table><thead><tr>'+keys.map(k=>'<th>'+esc(k[1])+'</th>').join('')+'</tr></thead><tbody>'+rows.slice().reverse().slice(0,15).map(r=>'<tr>'+keys.map(k=>'<td>'+esc(r[k[0]])+'</td>').join('')+'</tr>').join('')+'</tbody></table>'}
+function render(){
+$('statOrders').textContent=db.orders.length;$('statPacked').textContent=db.orders.filter(o=>o.packed).length;$('statPickup').textContent=db.pickups.filter(p=>p.pickup==='Picked up by courier').length;$('statReturns').textContent=db.returns.length;
+$('recentOrders').innerHTML=table(db.orders,[['code','Order / tracking'],['market','Marketplace'],['sku','SKU'],['qty','Qty'],['date','Ship-by']]);
+$('recentReturns').innerHTML=table(db.returns,[['code','Tracking'],['category','Category'],['market','Marketplace'],['inspection','Inspection'],['time','Saved at']]);
+$('allRecords').innerHTML='<h2>Orders</h2>'+table(db.orders,[['code','Code'],['market','Marketplace'],['sku','SKU'],['qty','Qty'],['date','Ship-by']])+'<h2>Returns</h2>'+table(db.returns,[['code','Tracking'],['category','Category'],['market','Marketplace'],['inspection','Inspection']])+'<h2>Pickup / RTD</h2>'+table(db.pickups,[['code','Code'],['rtd','RTD'],['pickup','Pickup'],['date','Date']]);
+}
+function csvDownload(name,rows,keys){const all=[keys.map(k=>k[1]),...rows.map(r=>keys.map(k=>r[k[0]]??''))];const csv=all.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
+$('saveOrder').onclick=()=>{let code=$('oCode').value.trim();if(!code){status('packStatus','Enter or scan an order/tracking code first.','error');return}if(db.orders.some(o=>o.code===code)){status('packStatus','Duplicate code detected. Check existing order before saving.','error');return}db.orders.push({code,market:$('oMarket').value,sku:$('oSku').value.trim(),qty:Math.max(1,+$('oQty').value||1),date:$('oDate').value,notes:$('oNotes').value.trim(),packed:true,time:new Date().toLocaleString()});$('oCode').value='';persist();status('packStatus','Order saved as packed in this device. Verify against the marketplace label.','ok')};
+$('saveReturn').onclick=()=>{const code=$('rCode').value.trim();if(!code){status('returnStatus','Scan or enter a tracking code first.','error');return}db.returns.push({code,category:$('rCategory').value,market:$('rMarket').value,inspection:$('rInspection').value,notes:$('rNotes').value.trim(),time:new Date().toLocaleString(),date:today()});$('rCode').value='';persist();status('returnStatus','Return saved in the unified local record. Inspect parcel before restocking.','ok')};
+$('savePickup').onclick=()=>{const code=$('pCode').value.trim();if(!code){alert('Enter order ID or tracking code.');return}db.pickups.push({code,market:$('pMarket').value,rtd:$('pRtd').value,pickup:$('pPickup').value,date:$('pDate').value||today(),ref:$('pRef').value.trim(),notes:$('pNotes').value.trim(),time:new Date().toLocaleString()});persist();alert('Pickup / RTD update saved in this device.')};
+async function stopScan(which){try{if(scanControls[which]){scanControls[which].stop();scanControls[which]=null}if(streams[which]){streams[which].getTracks().forEach(t=>t.stop());streams[which]=null}}catch(e){}const v=$(which==='pack'?'packVideo':'returnVideo');v.style.display='none';$(which==='pack'?'stopPack':'stopReturn').classList.add('hidden');$(which==='pack'?'startPack':'startReturn').classList.remove('hidden')}
+async function startScan(which){const isPack=which==='pack',vid=$(isPack?'packVideo':'returnVideo'),field=$(isPack?'oCode':'rCode'),statusId=isPack?'packStatus':'returnStatus';vid.style.display='block';$(isPack?'startPack':'startReturn').classList.add('hidden');$(isPack?'stopPack':'stopReturn').classList.remove('hidden');
+try{if(!navigator.mediaDevices?.getUserMedia)throw Error('Camera access requires the HTTPS website in Chrome.');streams[which]=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});vid.srcObject=streams[which];await vid.play();status(statusId,'Camera on. Hold barcode steady in view.');
+if(window.ZXingBrowser?.BrowserMultiFormatReader){const reader=new ZXingBrowser.BrowserMultiFormatReader();scanControls[which]=await reader.decodeFromVideoElement(vid,(result)=>{if(result){field.value=result.getText();status(statusId,'Barcode scanned. Verify the code before saving.','ok');stopScan(which)}})}
+else if('BarcodeDetector' in window){const detector=new BarcodeDetector();const tick=async()=>{if(!streams[which])return;try{const codes=await detector.detect(vid);if(codes.length){field.value=codes[0].rawValue;status(statusId,'Barcode scanned. Verify the code before saving.','ok');stopScan(which);return}}catch(e){}requestAnimationFrame(tick)};requestAnimationFrame(tick)}
+else throw Error('Scanner library failed to load. Check internet and reload.')}
+catch(e){await stopScan(which);status(statusId,'Scanner error: '+(e.message||e)+'. Allow camera permission and use HTTPS.','error')}}
+$('startPack').onclick=()=>startScan('pack');$('stopPack').onclick=()=>stopScan('pack');$('startReturn').onclick=()=>startScan('ret');$('stopReturn').onclick=()=>stopScan('ret');
+$('loadDemo').onclick=()=>{if(db.orders.length&&!confirm('Add sample orders to existing records?'))return;const d=today();db.orders.push({code:'DEMO-AMZ-1001',market:'Amazon',sku:'AF-FW-100',qty:1,date:d,notes:'Sample only',packed:true,time:new Date().toLocaleString()},{code:'DEMO-FK-1002',market:'Flipkart',sku:'AF-SUN-50',qty:2,date:d,notes:'Sample only',packed:true,time:new Date().toLocaleString()},{code:'DEMO-MEE-1003',market:'Meesho',sku:'AF-MO-50',qty:1,date:d,notes:'Sample only',packed:true,time:new Date().toLocaleString()});persist();alert('Sample orders added. Do not treat them as real orders.')};
+$('clearDemo').onclick=()=>{if(!confirm('Clear ALL local app records from this browser? Export a backup first if needed.'))return;db={orders:[],returns:[],pickups:[]};persist()};
+$('showRegister').onclick=()=>{const d=$('regDate').value||today(),orders=db.orders.filter(x=>(x.date||'')===d),returns=db.returns.filter(x=>(x.date||'')===d),pickups=db.pickups.filter(x=>(x.date||'')===d);$('registerSummary').innerHTML='Date: <b>'+esc(d)+'</b><br>Orders packed: <b>'+orders.length+'</b><br>Returns / RTO recorded: <b>'+returns.length+'</b><br>Pickup / RTD updates: <b>'+pickups.length+'</b>'; $('registerTable').innerHTML='<h2>Orders</h2>'+table(orders,[['code','Code'],['market','Marketplace'],['sku','SKU'],['qty','Qty']])+'<h2>Returns</h2>'+table(returns,[['code','Tracking'],['category','Category'],['inspection','Inspection']])+'<h2>Pickup / RTD</h2>'+table(pickups,[['code','Code'],['rtd','RTD'],['pickup','Pickup']])};
+$('exportOrders').onclick=()=>csvDownload('afrotics-orders.csv',db.orders,[['code','Order / tracking'],['market','Marketplace'],['sku','SKU'],['qty','Quantity'],['date','Ship-by'],['notes','Notes'],['time','Saved at']]);
+$('exportReturns').onclick=()=>csvDownload('afrotics-returns.csv',db.returns,[['code','Tracking'],['category','Category'],['market','Marketplace'],['inspection','Inspection'],['notes','Notes'],['date','Date'],['time','Saved at']]);
+$('exportPickup').onclick=()=>csvDownload('afrotics-pickup-rtd.csv',db.pickups,[['code','Order / tracking'],['market','Marketplace'],['rtd','RTD'],['pickup','Pickup'],['date','Date'],['ref','Reference'],['notes','Notes'],['time','Saved at']]);
+$('backup').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:'application/json'}));a.download='afrotics-smart-dispatch-backup.json';a.click();URL.revokeObjectURL(a.href)};
+$('restore').onclick=async()=>{const f=$('restoreFile').files[0];if(!f){alert('Choose a JSON backup file first.');return}try{const x=JSON.parse(await f.text());if(!x.orders||!x.returns||!x.pickups)throw Error('Backup format not recognized');if(!confirm('Replace all current local records with this backup?'))return;db=x;persist();alert('Backup restored on this device.')}catch(e){alert('Could not restore backup: '+e.message)}};
+$('oDate').value=today();$('pDate').value=today();$('regDate').value=today();render();
+</script></body></html>
